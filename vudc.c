@@ -19,6 +19,10 @@
 #define DRIVER_DESC "USB over IP UDC"
 #define DRIVER_VERSION "06 March 2015"
 
+#define DEBUG 1
+#define debug_print(...) \
+                do { if (DEBUG) printk(KERN_ERR __VA_ARGS__); } while (0)
+
 static const char driver_desc[] = DRIVER_DESC;
 static const char gadget_name[] = "vudc";
 
@@ -82,7 +86,13 @@ static ssize_t example_in_show(struct device *dev, struct device_attribute *attr
 		     char *out)
 {
 	char *s = out;
+
+    debug_print("[vudc] *** example_in_show ***\n");
+
 	out += sprintf(out, "Hi, variable = %d\n", sysfs_variable);
+
+    debug_print("[vudc] ### example_in_show ###\n");
+
 	return out - s;
 }
 static DEVICE_ATTR_RO(example_in);
@@ -90,7 +100,12 @@ static DEVICE_ATTR_RO(example_in);
 static ssize_t example_out(struct device *dev, struct device_attribute *attr,
 		     const char *in, size_t count)
 {
+    debug_print("[vudc] *** example_out ***\n");
+
     sscanf(in, "%u", &sysfs_variable);
+
+    debug_print("[vudc] ### example_out ###\n");
+
 	return count;
 }
 static DEVICE_ATTR(out, S_IWUSR, NULL, example_out);
@@ -102,11 +117,16 @@ static int vep_enable(struct usb_ep *_ep,
 {
 	struct vep *ep;
 
+    debug_print("[vudc] *** enable ***\n");
+
 	if (!_ep || !desc)
 		return -EINVAL;
 	ep = usb_ep_to_vep(_ep);
 
 	/* TODO */
+    
+    debug_print("[vudc] ### enable ###\n");
+
 	return 0;
 
 }
@@ -115,11 +135,16 @@ static int vep_disable(struct usb_ep *_ep)
 {
 	struct vep *ep;
 
+    debug_print("[vudc] *** disable ***\n");
+
 	if (!_ep)
 		return -EINVAL;
 	ep = usb_ep_to_vep(_ep);
 
 	/* TODO */
+
+    debug_print("[vudc] ### disable ###\n");
+
 	return 0;
 }
 
@@ -128,6 +153,8 @@ static struct usb_request *vep_alloc_request(struct usb_ep *_ep,
 {
 	struct vep *ep;
 	struct vrequest *req;
+
+    debug_print("[vudc] *** vep_alloc_request ***\n");
 
 	if (!_ep)
 		return NULL;
@@ -139,12 +166,16 @@ static struct usb_request *vep_alloc_request(struct usb_ep *_ep,
 
 	/* Do some additional request initialization here */
 
+    debug_print("[vudc] ### vep_alloc_request ###\n");
+
 	return &req->req;
 }
 
 static void vep_free_request(struct usb_ep *_ep, struct usb_request *_req)
 {
 	struct vrequest *req;
+
+    debug_print("[vudc] *** vep_free_request ***\n");
 
 	if (!_ep || !_req) {
 		WARN_ON(1);
@@ -156,6 +187,8 @@ static void vep_free_request(struct usb_ep *_ep, struct usb_request *_req)
 	/* Do some cleanup here if desired*/
 
 	kfree(req);
+
+    debug_print("[vudc] ### vep_free_request ###\n");
 }
 
 static int vep_queue(struct usb_ep *_ep, struct usb_request *_req,
@@ -164,6 +197,8 @@ static int vep_queue(struct usb_ep *_ep, struct usb_request *_req,
 	struct vep *ep;
 	struct vrequest *req;
 
+    debug_print("[vudc] *** vep_queue ***\n");
+
 	if (!_ep || !_req)
 		return -EINVAL;
 
@@ -171,6 +206,9 @@ static int vep_queue(struct usb_ep *_ep, struct usb_request *_req,
 	req = usb_request_to_vrequest(_req);
 
 	/* TODO */
+
+    debug_print("[vudc] ### vep_queue ###\n");
+
 	return -EINVAL;
 
 }
@@ -180,6 +218,8 @@ static int vep_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 	struct vep *ep;
 	struct vrequest *req;
 
+    debug_print("[vudc] *** vep_dequeue ***\n");
+
 	if (!_ep || !_req)
 		return -EINVAL;
 
@@ -187,19 +227,26 @@ static int vep_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 	req = usb_request_to_vrequest(_req);
 
 	/* TODO */
+
+    debug_print("[vudc] ### vep_dequeue ###\n");
+
 	return -EINVAL;
 }
 
 static int
 vep_set_halt(struct usb_ep *_ep, int value)
 {
+    debug_print("[vudc] *** vep_set_halt ***\n");
 	/* TODO */
+    debug_print("[vudc] ### vep_set_halt ###\n");
 	return -EINVAL;
 }
 
 static int vep_set_wedge(struct usb_ep *_ep)
 {
+    debug_print("[vudc] *** vep_set_wedge ***\n");
 	/* TODO */
+    debug_print("[vudc] ### vep_set_wedge ###\n");
 	return -EINVAL;
 }
 
@@ -221,38 +268,50 @@ static const struct usb_ep_ops vep_ops = {
 
 static int vgadget_get_frame(struct usb_gadget *_gadget)
 {
+    debug_print("[vudc] *** vgadget_get_frame ***\n");
 	/* TODO */
+    debug_print("[vudc] ### vgadget_get_frame ###\n");
 	return 0;
 }
 
 static int vgadget_wakeup(struct usb_gadget *_gadget)
 {
+    debug_print("[vudc] *** vgadget_wakeup ***\n");
 	/* TODO */
+    debug_print("[vudc] ### vgadget_wakeup ###\n");
 	return 0;
 }
 
 static int vgadget_set_selfpowered(struct usb_gadget *_gadget, int value)
 {
+    debug_print("[vudc] *** vgadget_set_selfpowered ***\n");
 	/* TODO */
+    debug_print("[vudc] ### vgadget_set_selfpowered ###\n");
 	return 0;
 }
 
 static int vgadget_pullup(struct usb_gadget *_gadget, int value)
 {
+    debug_print("[vudc] *** vgadget_pullup ***\n");
 	/* TODO */
+    debug_print("[vudc] ### vgadget_pullup ###\n");
 	return 0;
 }
 
 static int vgadget_udc_start(struct usb_gadget *g,
 		struct usb_gadget_driver *driver)
 {
+    debug_print("[vudc] *** vgadget_udc_start ***\n");
 	/* TODO */
+    debug_print("[vudc] ### vgadget_udc_start ###\n");
 	return 0;
 }
 
 static int vgadget_udc_stop(struct usb_gadget *g)
 {
+    debug_print("[vudc] *** vgadget_udc_stop ***\n");
 	/* TODO */
+    debug_print("[vudc] ### vgadget_udc_stop ###\n");
 	return 0;
 }
 
@@ -267,13 +326,17 @@ static const struct usb_gadget_ops vgadget_ops = {
 
 static int init_vudc_hw(struct vudc *vudc)
 {
+    debug_print("[vudc] *** init_vudc_hw ***\n");
 	/* TODO */
+    debug_print("[vudc] ### init_vudc_hw ###\n");
 	return 0;
 }
 
 static void cleanup_vudc_hw(struct vudc *vudc)
 {
+    debug_print("[vudc] *** cleanup_vudc_hw ***\n");
 	/* TODO */
+    debug_print("[vudc] ### cleanup_vudc_hw ###\n");
 	return;
 }
 
@@ -281,6 +344,8 @@ static int vudc_probe(struct platform_device *pdev)
 {
 	struct vudc *vudc;
 	int retval = -ENOMEM;
+
+    debug_print("[vudc] *** vudc_probe ***\n");
 
 	vudc = kzalloc(sizeof(*vudc), GFP_KERNEL);
 	if (!vudc)
@@ -310,6 +375,7 @@ err_add_udc:
 err_init_vudc_hw:
 	kfree(vudc);
 out:
+    debug_print("[vudc] ### vudc_probe ###\n");
 	return retval;
 }
 
@@ -317,24 +383,33 @@ static int vudc_remove(struct platform_device *pdev)
 {
 	struct vudc *vudc = platform_get_drvdata(pdev);
 
+    debug_print("[vudc] *** vudc_remove ***\n");
+
 	device_remove_file(&pdev->dev, &dev_attr_example_in);
 	device_remove_file(&pdev->dev, &dev_attr_out);
 
 	usb_del_gadget_udc(&vudc->gadget);
 	cleanup_vudc_hw(vudc);
 	kfree(vudc);
+
+    debug_print("[vudc] ### vudc_remove ###\n");
+
 	return 0;
 }
 
 static int vudc_suspend(struct platform_device *pdev, pm_message_t state)
 {
+    debug_print("[vudc] *** vudc_suspend ***\n");
 	/* TODO */
+    debug_print("[vudc] ### vudc_suspend ###\n");
 	return 0;
 }
 
 static int vudc_resume(struct platform_device *pdev)
 {
+    debug_print("[vudc] *** vudc_resume ***\n");
 	/* TODO */
+    debug_print("[vudc] ### vudc_resume ###\n");
 	return 0;
 }
 
@@ -358,6 +433,8 @@ static struct vudc_device *alloc_vudc_device(
 {
 	struct vudc_device *udc_dev = NULL;
 
+    debug_print("[vudc] *** alloc_vudc_device ***\n");
+
 	udc_dev = kzalloc(sizeof(*udc_dev), GFP_KERNEL);
 	if (!udc_dev)
 		goto out;
@@ -371,13 +448,18 @@ static struct vudc_device *alloc_vudc_device(
 	}
 
 out:
+    debug_print("[vudc] ### alloc_vudc_device ###\n");
 	return udc_dev;
 }
 
 static void put_vudc_device(struct vudc_device *udc_dev)
 {
+    debug_print("[vudc] *** put_vudc_device ***\n");
+
 	platform_device_put(udc_dev->dev);
 	kfree(udc_dev);
+
+    debug_print("[vudc] ### put_vudc_device ###\n");
 }
 
 static struct list_head vudc_devices = LIST_HEAD_INIT(vudc_devices);
@@ -387,6 +469,8 @@ static int __init init(void)
 	int retval = -ENOMEM;
 	int i;
 	struct vudc_device *udc_dev = NULL, *udc_dev2 = NULL;
+
+    debug_print("[vudc] *** init ***\n");
 
 	if (usb_disabled())
 		return -ENODEV;
@@ -435,6 +519,8 @@ static int __init init(void)
 		}
 	}
 
+    debug_print("[vudc] ### init ###\n");
+
 	return retval;
 
 err_probe_udc:
@@ -459,12 +545,15 @@ static void __exit cleanup(void)
 {
 	struct vudc_device *udc_dev = NULL, *udc_dev2 = NULL;
 
+    debug_print("[vudc] *** cleanup ***\n");
+
 	list_for_each_entry_safe(udc_dev, udc_dev2, &vudc_devices, list) {
 		list_del(&udc_dev->list);
 		platform_device_unregister(udc_dev->dev);
 		put_vudc_device(udc_dev);
 	}
 	platform_driver_unregister(&vudc_driver);
+    debug_print("[vudc] ### cleanup ###\n");
 }
 module_exit(cleanup);
 
