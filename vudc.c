@@ -7,12 +7,14 @@
  * (at your option) any later version.
  */
 
+#include <linux/device.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/platform_device.h>
 #include <linux/usb.h>
 #include <linux/usb/gadget.h>
+#include <linux/sysfs.h>
 
 #define DRIVER_DESC "USB over IP UDC"
 #define DRIVER_VERSION "06 March 2015"
@@ -72,6 +74,26 @@ static inline struct vudc *usb_gadget_to_vudc(
 {
 	return container_of(_gadget, struct vudc, gadget);
 }
+
+/* sysfs files */
+static int sysfs_variable = 0;
+
+static ssize_t example_in_show(struct device *dev, struct device_attribute *attr,
+		     char *out)
+{
+	char *s = out;
+	out += sprintf(out, "Hi, variable = %d\n", sysfs_variable);
+	return out - s;
+}
+static DEVICE_ATTR_RO(example_in);
+
+static ssize_t example_out(struct device *dev, struct device_attribute *attr,
+		     const char *in, size_t count)
+{
+    sscanf(in, "%u", &sysfs_variable);
+	return count;
+}
+static DEVICE_ATTR(out, S_IWUSR, NULL, example_out);
 
 /* endpoint related operations */
 
@@ -277,6 +299,9 @@ static int vudc_probe(struct platform_device *pdev)
 	if (retval < 0)
 		goto err_add_udc;
 
+	device_create_file(&pdev->dev, &dev_attr_example_in);
+	device_create_file(&pdev->dev, &dev_attr_out);
+
 	platform_set_drvdata(pdev, vudc);
 	return retval;
 
@@ -291,6 +316,9 @@ out:
 static int vudc_remove(struct platform_device *pdev)
 {
 	struct vudc *vudc = platform_get_drvdata(pdev);
+
+	device_remove_file(&pdev->dev, &dev_attr_example_in);
+	device_remove_file(&pdev->dev, &dev_attr_out);
 
 	usb_del_gadget_udc(&vudc->gadget);
 	cleanup_vudc_hw(vudc);
