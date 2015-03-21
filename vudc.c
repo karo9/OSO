@@ -42,16 +42,37 @@ static struct vudc_module_parameters mod_data = {
 module_param_named(num, mod_data.num, uint, S_IRUGO);
 MODULE_PARM_DESC(num, "number of emulated controllers");
 
+static const char ep0name[] = "ep0";
+
+static const char *const ep_name[] = {
+	ep0name,				/* everyone has ep0 */
+
+	"ep1in-bulk", "ep2out-bulk", "ep3in-iso", "ep4out-iso", "ep5in-int",
+	"ep6in-bulk", "ep7out-bulk", "ep8in-iso", "ep9out-iso", "ep10in-int",
+	"ep11in-bulk", "ep12out-bulk", "ep13in-iso", "ep14out-iso", "ep15in-int",
+
+	"ep1out-bulk", "ep2in-bulk",
+
+	"ep3out", "ep4in", "ep5out", "ep6out", "ep7in", "ep8out", "ep9in",
+	"ep10out", "ep11out", "ep12in", "ep13out", "ep14in", "ep15out",
+};
+#define VIRTUAL_ENDPOINTS	ARRAY_SIZE(ep_name)
+
 /* container for usb_ep to store some endpoint related data */
 struct vep {
 	struct usb_ep ep;
 	/* Add here some fields if needed */
+
+    struct usb_gadget *gadget;
+    struct list_head queue; // Request queue
 };
 
 /* container for usb_request to store some request related data */
 struct vrequest {
 	struct usb_request req;
         /* Add here some fields if needed */
+
+    struct list_head queue; // Request queue
 };
 
 struct vudc {
@@ -59,6 +80,10 @@ struct vudc {
 	struct usb_gadget_driver *driver;
 	struct platform_device *dev;
         /* Add here some fields if needed */
+
+    spinlock_t lock; //Proctect data
+    struct vep ep[VIRTUAL_ENDPOINTS]; //VUDC enpoints
+    int address; //VUDC address
 };
 
 /* suitable transator forom usb structures to our private one */
@@ -77,6 +102,11 @@ static inline struct vudc *usb_gadget_to_vudc(
 	struct usb_gadget *_gadget)
 {
 	return container_of(_gadget, struct vudc, gadget);
+}
+
+static inline struct vudc *ep_to_vudc(struct vep *ep)
+{
+    return container_of(ep->gadget, struct vudc, gadget);
 }
 
 /* sysfs files */
@@ -166,6 +196,8 @@ static struct usb_request *vep_alloc_request(struct usb_ep *_ep,
 
 	/* Do some additional request initialization here */
 
+    INIT_LIST_HEAD(&req->queue);
+
     debug_print("[vudc] ### vep_alloc_request ###\n");
 
 	return &req->req;
@@ -196,6 +228,8 @@ static int vep_queue(struct usb_ep *_ep, struct usb_request *_req,
 {
 	struct vep *ep;
 	struct vrequest *req;
+    struct vudc *vudc;
+    unsigned long flags;
 
     debug_print("[vudc] *** vep_queue ***\n");
 
@@ -204,12 +238,19 @@ static int vep_queue(struct usb_ep *_ep, struct usb_request *_req,
 
 	ep = usb_ep_to_vep(_ep);
 	req = usb_request_to_vrequest(_req);
+    vudc = ep_to_vudc(ep);
 
 	/* TODO */
+    spin_lock_irqsave(&vudc->lock, flags);
+
+    list_add_tail(&req->queue, &ep->queue);
+
+    spin_unlock_irqrestore(&vudc->lock, flags);
 
     debug_print("[vudc] ### vep_queue ###\n");
 
-	return -EINVAL;
+	//return -EINVAL;
+    return 0;
 
 }
 
@@ -326,7 +367,29 @@ static const struct usb_gadget_ops vgadget_ops = {
 
 static int init_vudc_hw(struct vudc *vudc)
 {
+    int i;
+
     debug_print("[vudc] *** init_vudc_hw ***\n");
+
+    INIT_LIST_HEAD(&vudc->gadget.ep_list);
+    for(i = 0; i < VIRTUAL_ENDPOINTS; ++i) {
+        struct vep *ep = &vudc->ep[i];
+
+        if(!ep_name[i])
+            break;
+
+        ep->ep.name = ep_name[i];
+        ep->ep.ops = &vep_ops;
+        list_add_tail(&ep->ep.ep_list, &vudc->gadget.ep_list);
+        ep->ep.max_streams = 16;
+        ep->gadget = &vudc->gadget;
+        
+        INIT_LIST_HEAD(&ep->queue);
+    }
+
+    vudc->gadget.ep0 = &vudc->ep[0].ep;
+    list_del_init(&vudc->ep[0].ep.ep_list);
+
 	/* TODO */
     debug_print("[vudc] ### init_vudc_hw ###\n");
 	return 0;
@@ -368,6 +431,9 @@ static int vudc_probe(struct platform_device *pdev)
 	device_create_file(&pdev->dev, &dev_attr_out);
 
 	platform_set_drvdata(pdev, vudc);
+
+    debug_print("[vudc] ### vudc_probe ###\n");
+
 	return retval;
 
 err_add_udc:
@@ -375,7 +441,6 @@ err_add_udc:
 err_init_vudc_hw:
 	kfree(vudc);
 out:
-    debug_print("[vudc] ### vudc_probe ###\n");
 	return retval;
 }
 
