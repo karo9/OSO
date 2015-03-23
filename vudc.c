@@ -381,6 +381,7 @@ static int init_vudc_hw(struct vudc *vudc)
 		ep->ep.name = ep_name[i];
 		ep->ep.ops = &vep_ops;
 		list_add_tail(&ep->ep.ep_list, &vudc->gadget.ep_list);
+		usb_ep_set_maxpacket_limit(&ep->ep, ~0);
 		ep->ep.max_streams = 16;
 		ep->gadget = &vudc->gadget;
 
