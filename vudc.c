@@ -333,7 +333,17 @@ static int vgadget_set_selfpowered(struct usb_gadget *_gadget, int value)
 
 static int vgadget_pullup(struct usb_gadget *_gadget, int value)
 {
+	struct vudc *vudc = usb_gadget_to_vudc(_gadget);
 	debug_print("[vudc] *** vgadget_pullup ***\n");
+
+	if (value && vudc->driver) {
+		vudc->gadget.speed = vudc->driver->max_speed;
+
+		if(vudc->gadget.speed == USB_SPEED_SUPER)
+			vudc->ep[0].ep.maxpacket = 9;
+		else
+			vudc->ep[0].ep.maxpacket = 64;
+	}
 	/* TODO */
 	debug_print("[vudc] ### vgadget_pullup ###\n");
 	return 0;
@@ -342,7 +352,11 @@ static int vgadget_pullup(struct usb_gadget *_gadget, int value)
 static int vgadget_udc_start(struct usb_gadget *g,
 		struct usb_gadget_driver *driver)
 {
+	struct vudc *vudc = usb_gadget_to_vudc(g);		
 	debug_print("[vudc] *** vgadget_udc_start ***\n");
+	
+	vudc->driver = driver;
+
 	/* TODO */
 	debug_print("[vudc] ### vgadget_udc_start ###\n");
 	return 0;
