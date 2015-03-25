@@ -9,6 +9,7 @@
 
 #include <linux/device.h>
 #include <linux/module.h>
+#include <linux/net.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/platform_device.h>
@@ -127,18 +128,30 @@ static ssize_t example_in_show(struct device *dev, struct device_attribute *attr
 }
 static DEVICE_ATTR_RO(example_in);
 
-static ssize_t example_out(struct device *dev, struct device_attribute *attr,
+static ssize_t store_sockfd(struct device *dev, struct device_attribute *attr,
 		     const char *in, size_t count)
 {
+	int rv, err;
+	int sockfd = 0;
+	struct socket *socket;
+
 	debug_print("[vudc] *** example_out ***\n");
 
-	sscanf(in, "%u", &sysfs_variable);
+	rv = sscanf(in, "%d", &sockfd);
+	if (rv != 1)
+		return -EINVAL;
+
+	socket = sockfd_lookup(sockfd, &err);
+	if(!socket)
+		return -EINVAL;
+
+	/*  Now create threads to take care of transmition */
 
 	debug_print("[vudc] ### example_out ###\n");
 
 	return count;
 }
-static DEVICE_ATTR(out, S_IWUSR, NULL, example_out);
+static DEVICE_ATTR(vudc_sockfd, S_IWUSR, NULL, store_sockfd);
 
 /* endpoint related operations */
 
@@ -443,7 +456,7 @@ static int vudc_probe(struct platform_device *pdev)
 		goto err_add_udc;
 
 	device_create_file(&pdev->dev, &dev_attr_example_in);
-	device_create_file(&pdev->dev, &dev_attr_out);
+	device_create_file(&pdev->dev, &dev_attr_vudc_sockfd);
 
 	platform_set_drvdata(pdev, vudc);
 
@@ -466,7 +479,7 @@ static int vudc_remove(struct platform_device *pdev)
 	debug_print("[vudc] *** vudc_remove ***\n");
 
 	device_remove_file(&pdev->dev, &dev_attr_example_in);
-	device_remove_file(&pdev->dev, &dev_attr_out);
+	device_remove_file(&pdev->dev, &dev_attr_vudc_sockfd);
 
 	usb_del_gadget_udc(&vudc->gadget);
 	cleanup_vudc_hw(vudc);
