@@ -16,6 +16,9 @@
 #include <linux/usb.h>
 #include <linux/usb/gadget.h>
 #include <linux/sysfs.h>
+#include <linux/kthread.h>
+//After creating thread_rx delete sched.h
+#include <linux/sched.h>
 
 #define DRIVER_DESC "USB over IP UDC"
 #define DRIVER_VERSION "06 March 2015"
@@ -82,6 +85,8 @@ struct vudc {
 	struct platform_device *dev;
 	/* Add here some fields if needed */
 
+	struct task_struct *vudc_rx;
+
 	spinlock_t lock; //Proctect data
 	struct vep ep[VIRTUAL_ENDPOINTS]; //VUDC enpoints
 	int address; //VUDC address
@@ -128,24 +133,43 @@ static ssize_t example_in_show(struct device *dev, struct device_attribute *attr
 }
 static DEVICE_ATTR_RO(example_in);
 
+int thread_rx(void *data)
+{
+	debug_print("[vudc] *** thread_rx ***\n");
+	/*while (!kthread_should_stop()) 
+	{
+		TODO
+		Listen
+	}*/
+	debug_print("[vudc] ### thread_rx ###\n");
+	return 0;
+}
+
 static ssize_t store_sockfd(struct device *dev, struct device_attribute *attr,
 		     const char *in, size_t count)
 {
-	int rv, err;
+	int rv;
 	int sockfd = 0;
-	struct socket *socket;
+	struct vudc *vudc;
+	//int err;
+	//struct socket *socket;
 
 	debug_print("[vudc] *** example_out ***\n");
+
+	vudc = (struct vudc*)dev_get_drvdata(dev);
 
 	rv = sscanf(in, "%d", &sockfd);
 	if (rv != 1)
 		return -EINVAL;
 
+	/*
 	socket = sockfd_lookup(sockfd, &err);
 	if(!socket)
 		return -EINVAL;
+	*/
 
 	/*  Now create threads to take care of transmition */
+	vudc->vudc_rx = kthread_run(&thread_rx, NULL, "vudc_rx");
 
 	debug_print("[vudc] ### example_out ###\n");
 
