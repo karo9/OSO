@@ -20,6 +20,9 @@
 //After creating thread_rx delete sched.h
 #include <linux/sched.h>
 
+
+#include <net/sock.h>
+
 #define DRIVER_DESC "USB over IP UDC"
 #define DRIVER_VERSION "06 March 2015"
 
@@ -135,14 +138,71 @@ static DEVICE_ATTR_RO(example_in);
 
 int thread_rx(void *data)
 {
+	int result;
+	struct msghdr msg;
+	struct kvec iov;
+	int total;
+	char buf[10];
+	char response[10];
+	int size;
+	char *bp;
+	int osize;
+	struct socket *sock;
+	struct msghdr msg2;
+	struct kvec iov2;
+
 	debug_print("[vudc] *** thread_rx ***\n");
+
+	//Simple recv
+	sock = (struct socket *) data;
+	total = 0;
+	size = 10;
+	bp = buf;
+	osize = size;
+
+	sock->sk->sk_allocation = GFP_NOIO;
+	iov.iov_base    = buf;
+	iov.iov_len     = size;
+	msg.msg_name    = NULL;
+	msg.msg_namelen = 0;
+	msg.msg_control = NULL;
+	msg.msg_controllen = 0;
+	msg.msg_flags      = MSG_NOSIGNAL;
+
+	memset(&msg2, 0, sizeof(struct msghdr));
+	response[0] = 'O';
+	response[1] = 'k';
+	response[2] = '\0';
+
+	iov2.iov_base = response;
+	iov2.iov_len = 3;
+
+	result = 1;
+	while(result != 0)
+	{
+		debug_print("[vudc] Start listening \n");
+		result = kernel_recvmsg(sock, &msg, &iov, 1, size, MSG_WAITALL);
+		if (result <= 0) {
+			debug_print("[vudc] Error during recv\n");
+		}
+
+		buf[9] = '\0';
+		debug_print("[vudc] Message received: %s\n", buf);
+
+
+		kernel_sendmsg(sock, &msg2, &iov2, 1, 3);
+	}
+
+	kernel_sock_shutdown(sock, 0);
+
+	debug_print("[vudc] ### thread_rx ###\n");
+	return 0;
+
 	/*while (!kthread_should_stop()) 
 	{
 		TODO
 		Listen
 	}*/
-	debug_print("[vudc] ### thread_rx ###\n");
-	return 0;
 }
 
 static ssize_t store_sockfd(struct device *dev, struct device_attribute *attr,
@@ -151,8 +211,8 @@ static ssize_t store_sockfd(struct device *dev, struct device_attribute *attr,
 	int rv;
 	int sockfd = 0;
 	struct vudc *vudc;
-	//int err;
-	//struct socket *socket;
+	int err;
+	struct socket *socket;
 
 	debug_print("[vudc] *** example_out ***\n");
 
@@ -162,14 +222,15 @@ static ssize_t store_sockfd(struct device *dev, struct device_attribute *attr,
 	if (rv != 1)
 		return -EINVAL;
 
-	/*
 	socket = sockfd_lookup(sockfd, &err);
 	if(!socket)
+	{
+		debug_print("[vudc] Failed to lookup sock");
 		return -EINVAL;
-	*/
+	}
 
 	/*  Now create threads to take care of transmition */
-	vudc->vudc_rx = kthread_run(&thread_rx, NULL, "vudc_rx");
+	vudc->vudc_rx = kthread_run(&thread_rx, socket, "vudc_rx");
 
 	debug_print("[vudc] ### example_out ###\n");
 
