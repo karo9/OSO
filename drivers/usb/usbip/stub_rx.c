@@ -583,6 +583,11 @@ int stub_rx_loop(void *data)
 {
 	struct usbip_device *ud = data;
 
+	if(ud->side == USBIP_VUDC) {
+		printk(KERN_ERR "hahah dupa");
+		return 0;
+	}
+
 	while (!kthread_should_stop()) {
 		if (usbip_event_happened(ud))
 			break;
@@ -592,3 +597,4 @@ int stub_rx_loop(void *data)
 
 	return 0;
 }
+EXPORT_SYMBOL(stub_rx_loop)

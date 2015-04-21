@@ -723,17 +723,19 @@ int usbip_recv_xbuff(struct usbip_device *ud, struct urb *urb)
 	int ret;
 	int size;
 
-	if (ud->side == USBIP_STUB) {
+	if (ud->side == USBIP_STUB || ud->side == USBIP_VUDC) {
 		/* the direction of urb must be OUT. */
 		if (usb_pipein(urb->pipe))
 			return 0;
 
+		printk(KERN_ERR " Recv_xbuff dobry");
 		size = urb->transfer_buffer_length;
 	} else {
 		/* the direction of urb must be IN. */
 		if (usb_pipeout(urb->pipe))
 			return 0;
 
+		printk(KERN_ERR " Recv_xbuff zly");
 		size = urb->actual_length;
 	}
 
