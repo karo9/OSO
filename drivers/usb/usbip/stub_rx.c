@@ -597,4 +597,4 @@ int stub_rx_loop(void *data)
 
 	return 0;
 }
-EXPORT_SYMBOL(stub_rx_loop)
+EXPORT_SYMBOL(stub_rx_loop);

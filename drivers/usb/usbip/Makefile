@@ -9,9 +9,9 @@ vhci-hcd-y := vhci_sysfs.o vhci_tx.o vhci_rx.o vhci_hcd.o
 obj-$(CONFIG_USBIP_HOST) += usbip-host.o
 usbip-host-y := stub_dev.o stub_main.o stub_rx.o stub_tx.o
 
-obj-m := vudc.o
+#obj-m := vudc.o
 
-#obj-m += vudc.o
+obj-m += vudc.o
 #vudc := stub_dev.o stub_main.o stub_rx.o stub_tx.o
 
 #vudc := vudc.o usbip_common.o

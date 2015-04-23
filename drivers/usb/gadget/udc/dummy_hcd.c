@@ -1236,7 +1236,7 @@ static int dummy_urb_enqueue(
 	list_for_each_entry(urbp2, &dum_hcd2->urbp_list, urbp_list) {
         list_size++;
 	}
-    printk(KERN_ERR "dummy_urb_enqeueu list size %d", list_size);
+    //printk(KERN_ERR "dummy_urb_enqeueu list size %d", list_size);
 
 	/* kick the scheduler, it'll do the rest */
 	if (!timer_pending(&dum_hcd->timer))
@@ -1794,7 +1794,6 @@ restart:
 			goto return_urb;
 		}
 
-		printk(KERN_ERR "[dummy_timer] 1");
 		if (ep->already_seen)
 			continue;
 		ep->already_seen = 1;
@@ -1812,7 +1811,6 @@ restart:
 		/* FIXME make sure both ends agree on maxpacket */
 
 		/* handle control requests */
-		printk(KERN_ERR "[dummy_timer] 2");
 		if (ep == &dum->ep[0] && ep->setup_stage) {
 			struct usb_ctrlrequest		setup;
 			int				value = 1;
@@ -1848,6 +1846,7 @@ restart:
 			 */
 			if (value > 0) {
 				spin_unlock(&dum->lock);
+				printk(KERN_ERR "[dummy_timer] Dum->driver->setup\n");
 				value = dum->driver->setup(&dum->gadget,
 						&setup);
 				spin_lock(&dum->lock);
@@ -1872,7 +1871,6 @@ restart:
 			goto return_urb;
 		}
 
-		printk(KERN_ERR "[dummy_timer] 3");
 		/* non-control requests */
 		limit = total;
 		switch (usb_pipetype(urb->pipe)) {
@@ -1900,13 +1898,11 @@ treat_control_like_bulk:
 			break;
 		}
 
-		printk(KERN_ERR "[dummy_timer] 4");
 		/* incomplete transfer? */
 		if (status == -EINPROGRESS)
 			continue;
 
 return_urb:
-		printk(KERN_ERR "[dummy_timer] 5");
 		list_del(&urbp->urbp_list);
 		kfree(urbp);
 		if (ep)
@@ -1927,7 +1923,6 @@ return_urb:
 		/* want a 1 msec delay here */
 		mod_timer(&dum_hcd->timer, jiffies + msecs_to_jiffies(1));
 	}
-	printk(KERN_ERR "[dummy_timer] 6");
 
 	spin_unlock_irqrestore(&dum->lock, flags);
 }
@@ -2085,6 +2080,7 @@ static int dummy_hub_control(
 		break;
 
 	case DeviceRequest | USB_REQ_GET_DESCRIPTOR:
+		printk(KERN_ERR "Odpowiadam na get desri* \n");
 		if (hcd->speed != HCD_USB3)
 			goto error;
 

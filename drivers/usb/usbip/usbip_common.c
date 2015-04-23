@@ -32,11 +32,44 @@
 #define DRIVER_AUTHOR "Takahiro Hirofuchi <hirofuchi@users.sourceforge.net>"
 #define DRIVER_DESC "USB/IP Core"
 
-#ifdef CONFIG_USBIP_DEBUG
-unsigned long usbip_debug_flag = 0xffffffff;
-#else
-unsigned long usbip_debug_flag;
-#endif
+/* 	usbip_debug_xmit	= (1 << 0),
+ * 	usbip_debug_sysfs	= (1 << 1),
+ * 	usbip_debug_urb		= (1 << 2),
+ * 	usbip_debug_eh		= (1 << 3),
+ * 
+ * 	usbip_debug_stub_cmp	= (1 << 8),
+ * 	usbip_debug_stub_dev	= (1 << 9),
+ * 	usbip_debug_stub_rx	= (1 << 10),
+ * 	usbip_debug_stub_tx	= (1 << 11),
+ * 
+ * 	usbip_debug_vhci_rh	= (1 << 8),
+ * 	usbip_debug_vhci_hc	= (1 << 9),
+ * 	usbip_debug_vhci_rx	= (1 << 10),
+ * 	usbip_debug_vhci_tx	= (1 << 11),
+ * 	usbip_debug_vhci_sysfs  = (1 << 12)
+ */
+
+/* unsigned long usbip_debug_flag = usbip_debug_xmit
+ * 								| usbip_debug_sysfs
+ * 								| usbip_debug_urb
+ * 								| usbip_debug_eh
+ * 								| usbip_debug_stub_cmp
+ * 								| usbip_debug_stub_dev
+ * 								| usbip_debug_stub_rx
+ * 								| usbip_debug_stub_tx;
+ * 
+ */
+
+//unsigned long usbip_debug_flag = usbip_debug_urb;
+
+//unsigned long usbip_debug_flag = 0;
+//unsigned long usbip_debug_flag = 0xf4;
+//unsigned long usbip_debug_flag = 0xff;
+unsigned long usbip_debug_flag = 0xcff;
+//unsigned long usbip_debug_flag = 0x1dff;
+//unsigned long usbip_debug_flag = 0xffffffff;
+//unsigned long usbip_debug_flag = (0xffffffff & (~(usbip_debug_vhci_hc)));
+
 EXPORT_SYMBOL_GPL(usbip_debug_flag);
 module_param(usbip_debug_flag, ulong, S_IRUGO|S_IWUSR);
 MODULE_PARM_DESC(usbip_debug_flag, "debug flags (defined in usbip_common.h)");
