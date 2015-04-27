@@ -19,6 +19,7 @@
 #include <linux/sysfs.h>
 #include <linux/kthread.h>
 #include <linux/file.h>
+#include <linux/byteorder/generic.h>
 
 #include "usbip_common.h"
 #include "stub.h"
@@ -144,7 +145,89 @@ static ssize_t example_in_show(struct device *dev, struct device_attribute *attr
 }
 static DEVICE_ATTR_RO(example_in);
 
+static ssize_t fetch_descriptor(struct usb_ctrlrequest* req, struct vudc* udc,
+				char *out, ssize_t maxsz)
+{
+	struct vrequest *usb_req;
+	int ret;
+	struct vep *ep0 = usb_ep_to_vep(udc->gadget.ep0);
 
+	ret = udc->driver->setup(&(udc->gadget), req);
+	if (ret < 0) {
+		debug_print("[vudc] Failed to setup device descriptor request!\n");
+		goto exit;
+	}
+
+	/* FIXME: assuming request queue is empty; request is now on top */
+	usb_req = list_entry(ep0->queue.prev, struct vrequest, queue);
+	list_del(&(usb_req->queue));
+
+	if (maxsz < usb_req->req.length) {
+		ret = -1;
+		goto clean_req;
+	}
+
+	memcpy(out, usb_req->req.buf, usb_req->req.length);
+	ret = usb_req->req.length;
+
+clean_req:
+	usb_req->req.status = 0;
+	usb_req->req.actual = usb_req->req.length;
+	usb_gadget_giveback_request(&(ep0->ep), &(usb_req->req));
+exit:
+	return ret;
+}
+
+/*
+ * Fetches device and interface descriptors from the gadget driver.
+ * Writes the device descriptor first, then interface descriptors in order as
+ * in chapter 9.
+ */
+static ssize_t descriptor_show(struct device *dev,
+			       struct device_attribute *attr, char *out)
+{
+	struct vudc *udc;
+	struct usb_ctrlrequest req;
+	struct usb_device_descriptor *dev_desc;
+	int ret;
+	int sz = 0;
+	int i;
+
+	udc = (struct vudc*) dev_get_drvdata(dev);
+	if (!udc || !udc->driver)
+		return -1;
+
+	req.bRequestType = USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE;
+	req.bRequest = USB_REQ_GET_DESCRIPTOR;
+	req.wValue = cpu_to_le16(USB_DT_DEVICE << 8);
+	req.wIndex = cpu_to_le16(0);
+	req.wLength = cpu_to_le16(PAGE_SIZE - sz);
+	ret = fetch_descriptor(&req, udc, out + sz, PAGE_SIZE - sz);
+	if (ret < 0) {
+		debug_print("[vudc] Could not fetch device descriptor!\n");
+		return -1;
+	}
+	sz += ret;
+	dev_desc = (struct usb_device_descriptor *) out;
+
+	req.bRequestType = USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE;
+	req.bRequest = USB_REQ_GET_DESCRIPTOR;
+	req.wValue = cpu_to_le16(USB_DT_CONFIG << 8);
+	req.wIndex = cpu_to_le16(0);
+	req.wLength = cpu_to_le16(PAGE_SIZE - sz);
+	for (i = 0; i < dev_desc->bNumConfigurations ; i++) {
+		req.wIndex = cpu_to_le16(i);
+		ret = fetch_descriptor(&req, udc, out + sz, PAGE_SIZE - sz);
+		if (ret < 0) {
+			debug_print("[vudc] Could not fetch interface descriptor!\n");
+			return -1;
+		}
+		sz += ret;
+	}
+	return sz;
+}
+
+static DEVICE_ATTR_RO(descriptor);
 
 /* ************************************************************************************************************ */
 
@@ -775,6 +858,7 @@ static int vudc_probe(struct platform_device *pdev)
 		goto err_add_udc;
 
 	device_create_file(&pdev->dev, &dev_attr_example_in);
+	device_create_file(&pdev->dev, &dev_attr_descriptor);
 	device_create_file(&pdev->dev, &dev_attr_vudc_sockfd);
 
 	platform_set_drvdata(pdev, vudc);
@@ -798,6 +882,7 @@ static int vudc_remove(struct platform_device *pdev)
 	debug_print("[vudc] *** vudc_remove ***\n");
 
 	device_remove_file(&pdev->dev, &dev_attr_example_in);
+	device_remove_file(&pdev->dev, &dev_attr_descriptor);
 	device_remove_file(&pdev->dev, &dev_attr_vudc_sockfd);
 
 	usb_del_gadget_udc(&vudc->gadget);
