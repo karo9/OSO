@@ -11,7 +11,7 @@ usbip-host-y := stub_dev.o stub_main.o stub_rx.o stub_tx.o
 
 #obj-m := vudc.o
 
-obj-m += vudc.o
-#vudc := stub_dev.o stub_main.o stub_rx.o stub_tx.o
+obj-m += vudc.o stub_rx.o
+#vudc := stub_rx.o
 
 #vudc := vudc.o usbip_common.o
